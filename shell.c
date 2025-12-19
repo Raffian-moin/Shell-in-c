@@ -6,7 +6,7 @@
 
 #define COMMAND_MAX_LENGTH 100
 #define MAX_TOKEN 256
-#define DELIMITTER " \t\n"
+#define DELIMITTER " \t\r\n\a"
 
 enum command_status {
     COMMAND_NOT_FOUND = -1,
@@ -21,10 +21,36 @@ static char *external_commands[] = {
     "touch"
 };
 
-static char *built_in_commands[] = {
+int built_in_help(char *commands[]) {
+    printf("Supported external commands:\n");
+    printf("\n");
+    printf("%-10s list of files in directory\n", "ls");
+    printf("%-10s create files\n", "touch");
+    printf("\n");
+    printf("\n");
+    printf("Supported built-in commands:\n");
+    printf("\n");
+    printf("%-10s see the available commands\n", "help");
+    printf("%-10s history of commands typed by user\n", "history");
+    printf("%-10s exit the shell\n", "exit");
+
+    return 1;
+}
+
+int built_in_exit(char *commands[]) {
+    printf("Exiting the shell...\n");
+    return 0;
+}
+
+static int (*built_in_command_func[]) (char *commands[]) = {
+    &built_in_help,
+    &built_in_exit
+};
+
+static char *built_in_command_name[] = {
     "help",
+    "exit",
     "history",
-    "exit"
 };
 
 char **parse_command(char command[]) {
@@ -43,7 +69,7 @@ char **parse_command(char command[]) {
     return tokens;
 }
 
-int handlecommand(char **tokens) {
+int get_command_type(char **tokens) {
     size_t external_command_size = sizeof(external_commands) / sizeof(external_commands[0]);
     for(int i = 0; i < (int) external_command_size; i++) {
         if (strcmp(external_commands[i], tokens[0]) == 0) {
@@ -51,27 +77,37 @@ int handlecommand(char **tokens) {
         }
     }
 
-    size_t built_in_command_size = sizeof(built_in_commands) / sizeof(built_in_commands[0]);
+    size_t built_in_command_size = sizeof(built_in_command_name) / sizeof(built_in_command_name[0]);
     for(int i = 0; i < (int) built_in_command_size; i++) {
-        if (strcmp(built_in_commands[i], tokens[0]) == 0) {
+        if (strcmp(built_in_command_name[i], tokens[0]) == 0) {
             return BUILT_IN_COMMAND;
         }
     }
 
-    return -1;
+    return COMMAND_NOT_FOUND;
+}
 
+int handle_built_in_command(char *command[]) {
+    size_t built_in_command_size = sizeof(built_in_command_name) / sizeof(built_in_command_name[0]);
+
+    for(int i = 0; i < (int) built_in_command_size; i++) {
+        if (strcmp(built_in_command_name[i], tokens[0]) == 0) {
+            return built_in_command_func[i](command);
+        }
+    }
 }
 
 int main() {
-    while(1) {
+    int shell_status = 1;
+    do {
         printf(">> ");
         fflush(stdout);
 
         char command[COMMAND_MAX_LENGTH];
         if (fgets(command, sizeof(command), stdin) != NULL) {
             char **tokens = parse_command(command);
-            int command_st = handlecommand(tokens);
-            switch(command_st) {
+            int command_type = get_command_type(tokens);
+            switch(command_type) {
                 case EXTERNAL_COMMAND:
                     int status;
                     pid_t child = fork();
@@ -85,12 +121,12 @@ int main() {
                     }
                     break;
                 case BUILT_IN_COMMAND:
-                    printf("builtin command\n");
+                    shell_status = handle_built_in_command(tokens);
                     break;
                 case COMMAND_NOT_FOUND:
                     printf("%s command not found\n", tokens[0]);
                     break;
             }
         }
-    }
+    } while(shell_status);
 }
