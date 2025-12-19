@@ -1,0 +1,11 @@
+- [ ] ASCII escape sequence for for command prompt
+- [ ] Pipe and redirection functionality
+- [ ] Handle error and signal from the fork() call
+- [ ] Show current directory, username
+- [ ] Background process
+- [ ] up and down arrow for history navigation
+- [ ] Test cases
+- [ ] Make project modular
+- [ ] Licensing
+- [ ] Add comments
+- [ ] Update README
